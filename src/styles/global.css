@@ -40,28 +40,67 @@ body {
 }
 
 body::before {
-	content: "";
-	position: fixed;
-	inset: 0;
-	z-index: 0;
-	pointer-events: none;
-	background-image:
-		radial-gradient(circle at 20px 40px, rgba(244, 246, 250, 0.8) 0px, rgba(244, 246, 250, 0.8) 1px, transparent 2px),
-		radial-gradient(circle at 140px 160px, rgba(72, 214, 233, 0.7) 0px, rgba(72, 214, 233, 0.7) 1px, transparent 2.5px),
-		radial-gradient(circle at 300px 260px, rgba(244, 246, 250, 0.6) 0px, rgba(244, 246, 250, 0.6) 1px, transparent 2px),
-		radial-gradient(circle at 460px 80px, rgba(72, 214, 233, 0.6) 0px, rgba(72, 214, 233, 0.6) 1px, transparent 2.2px);
-	background-size: 600px 600px;
-	opacity: 0.45;
-	animation: driftStars 80s linear infinite;
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.65;
+  will-change: transform;
+  background-image:
+    radial-gradient(circle at 20px 40px, rgba(244,246,250,.8) 1px, transparent 2px),
+    radial-gradient(circle at 140px 160px, rgba(72,214,233,.6) 1px, transparent 2.2px),
+    radial-gradient(circle at 300px 260px, rgba(244,246,250,.7) 1px, transparent 2px),
+    radial-gradient(circle at 460px 80px, rgba(72,214,233,.55) 1px, transparent 2.2px),
+    radial-gradient(circle at 520px 520px, rgba(255,255,255,.45) 1px, transparent 2px),
+    radial-gradient(circle at 80px 520px, rgba(200,230,255,.35) 1px, transparent 2px);
+  background-size: 800px 800px;
+  animation: driftFar 120s linear infinite;
 }
 
-@keyframes driftStars {
-	from {
-		transform: translateY(0);
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.9;
+  will-change: transform, opacity;
+  background-image:
+    radial-gradient(circle at 100px 100px, rgba(255,255,255,.9) 1.5px, transparent 2.5px),
+    radial-gradient(circle at 260px 200px, rgba(180,230,255,.8) 1.5px, transparent 2.5px),
+    radial-gradient(circle at 420px 320px, rgba(255,255,255,.85) 1.8px, transparent 2.8px),
+    radial-gradient(circle at 540px 40px, rgba(160,220,255,.75) 1.6px, transparent 2.6px),
+    radial-gradient(circle at 40px 300px, rgba(255,255,255,.8) 1.5px, transparent 2.5px),
+    radial-gradient(circle at 300px 520px, rgba(200,240,255,.8) 1.6px, transparent 2.6px);
+  background-size: 500px 500px;
+  animation:
+    driftNear 60s linear infinite,
+    twinkle 3.5s ease-in-out infinite alternate;
+}
+
+@keyframes driftFar {
+  	from{ 
+		transform: translate3d(0, 0, 0); 
 	}
-	to {
-		transform: translateY(600px);
+  	to{ 
+		transform: translate3d(0, 800px, 0); 
 	}
+}
+
+@keyframes driftNear {
+  	from{ 
+		transform: translate3d(0, 0, 0); 
+	}
+  	to{
+		transform: translate3d(-200px, 500px, 0); 
+	}
+}
+
+@keyframes twinkle {
+  0%   { opacity: 0.85; filter: brightness(0.95); }
+  60%  { opacity: 1;    filter: none; }
+  100% { opacity: 0.75; filter: brightness(0.9); }
 }
 
 main {
@@ -160,7 +199,6 @@ strong,b {
 }
 
 .section {
-	background: var(--color-2);
 	border-radius: 1.25rem;
 	padding: 2.5rem 2rem;
 	display: grid;
@@ -359,7 +397,8 @@ hr {
 }	
 
 @media (prefers-reduced-motion: reduce) {
-  	body::before {
+  	body::before,
+  	body::after  {
   	  animation: none;
   	}
 }
