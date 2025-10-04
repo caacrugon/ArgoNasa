@@ -1,11 +1,55 @@
----
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+﻿---
+import BaseHead from "../components/BaseHead.astro";
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const pageTitle = "A World Away: Hunting for Exoplanets with AI";
+const pageDescription = "Argo helps NASA space app judges explore a human-AI workflow that spots promising exoplanet candidates from light curve data.";
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title={pageTitle} description={pageDescription} />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <span class="mission-tag">NASA Space Apps Challenge 2025</span>
+        <h1>A World Away: Intelligent Exoplanet Hunter</h1>
+        <p>
+          Our Argo team combines NASA's open light-curve archives with explainable AI to rapidly surface
+          exoplanet candidates and deliver story-driven insights that empower mission scientists and citizen
+          astronomers alike.
+        </p>
+        <div class="hero-actions">
+          <a href="#prototype">Explore the prototype</a>
+          <a href="#workflow">View the AI workflow</a>
+        </div>
+      </section>
+
+      <section class="section" id="prototype">
+        <h2>AI</h2>
+      </section>
+
+      <section class="section two-column" id="workflow">
+        <div>
+          <h2>Mission objectives</h2>
+          <ul>
+            <li>Accelerate candidate discovery without sacrificing scientific rigor.</li>
+            <li>Highlight the most habitable prospects through contextual scoring.</li>
+            <li>Equip outreach teams with engaging, trustworthy findings.</li>
+          </ul>
+        </div>
+        <div>
+          <h2>AI workflow</h2>
+          <ul>
+            <li>Ingest NASA archives via Astroquery and pre-process with physics-aware filters.</li>
+            <li>Detect transits using a convolutional transformer tuned on confirmed exoplanets.</li>
+            <li>Summarize discoveries with a fine-tuned language model and validate with domain prompts.</li>
+          </ul>
+        </div>
+      </section>
+
+      <p class="footer-note">Draft submission - Argonautas - A World Away - Powered by open NASA data and human curiosity.</p>
+    </main>
+  </body>
+</html>
