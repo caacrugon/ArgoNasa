@@ -20,194 +20,579 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
           candidates fast, then delivers stories and visuals that keep scientists and citizen astronomers in sync.
         </p>
         <div class="hero-actions">
-          <a href="#ai">Test the AI toolkit</a>
-          <a href="#workflow">View the mission workflow</a>
+          <button type="button" class="cta section-toggle is-active" data-target="workflow" aria-controls="workflow" aria-pressed="true">View the mission workflow</button>
+          <button type="button" class="cta section-toggle" data-target="ai" aria-controls="ai" aria-pressed="false">Test the AI toolkit</button>
         </div>
       </section>
 
-      <section class="section" id="ai">
-  <h2>Exoplanet AI toolkit</h2>
-  <p>
-    Download the production <strong>XGBoost light-curve classifier</strong> and run it locally or in your
-    own cloud notebook. Use the interface below to run a batch upload or a single-candidate review.
-  </p>
-  <div class="ai-download">
-    <a class="download-chip" href="/models/exoplanet_xgb_pipeline.joblib" download>
-      exoplanet_xgb_pipeline.joblib
-    </a>
-    <span class="download-hint">Trained on confirmed Kepler & TESS transits - 7 engineered features</span>
-  </div>
-
-  <div class="ai-module">
-    <article class="ai-option">
-      <h3>1. Upload light-curve table</h3>
-      <p>CSV with one row per observation. Required headers shown in the schema.</p>
-      <form class="ai-form" id="batch-form" aria-label="Batch exoplanet upload">
-        <label class="form-label" for="candidate-file">Upload CSV</label>
-        <input class="file-input" id="candidate-file" name="candidate-file" type="file" accept=".csv,.tsv,.txt" />
-        <details class="schema">
-          <summary>Expected columns</summary>
-          <ul>
-            <li><code>orbital_period_days</code></li>
-            <li><code>transit_duration_hrs</code></li>
-            <li><code>transit_depth_pct</code></li>
-            <li><code>stellar_temp_k</code></li>
-            <li><code>stellar_radius_solar</code></li>
-            <li><code>flux_variability</code></li>
-            <li><code>signal_to_noise</code></li>
-          </ul>
-        </details>
-        <button type="button" id="preview-btn" class="ghost-btn">Predict for table</button>
-      </form>
-      <div class="ai-results" id="batch-results"></div>
-    </article>
-
-    <article class="ai-option">
-      <h3>2. Evaluate a single candidate</h3>
-      <p>Enter measurements to estimate a single prediction.</p>
-      <form class="ai-form" id="single-form" aria-label="Manual exoplanet candidate entry">
-        <div class="field-grid">
-          <label>Orbital period (days)
-            <input id="f_orbital_period_days" type="number" step="0.01" placeholder="12.34" />
-          </label>
-          <label>Transit duration (hrs)
-            <input id="f_transit_duration_hrs" type="number" step="0.01" placeholder="1.8" />
-          </label>
-          <label>Transit depth (%)
-            <input id="f_transit_depth_pct" type="number" step="0.001" placeholder="0.15" />
-          </label>
-          <label>Stellar temperature (K)
-            <input id="f_stellar_temp_k" type="number" step="1" placeholder="5780" />
-          </label>
-          <label>Stellar radius (R_sun)
-            <input id="f_stellar_radius_solar" type="number" step="0.01" placeholder="1.05" />
-          </label>
-          <label>Flux variability
-            <input id="f_flux_variability" type="number" step="0.001" placeholder="0.012" />
-          </label>
-          <label>Signal-to-noise ratio
-            <input id="f_signal_to_noise" type="number" step="0.1" placeholder="32.7" />
-          </label>
+      <section class="section is-hidden" id="ai">
+        <h2>Exoplanet AI toolkit</h2>
+        <p>
+          Download the production <strong>XGBoost light-curve classifier</strong> and run it locally or in your
+          own cloud notebook. Use the interface below to run a batch upload or a single-candidate review.
+        </p>
+        <div class="ai-download">
+          <a class="download-chip" href="/models/exoplanet_xgb_pipeline.joblib" download>
+            exoplanet_xgb_pipeline.joblib
+          </a>
+          <span class="download-hint">Trained on confirmed Kepler & TESS transits - 7 engineered features</span>
         </div>
-        <button type="button" id="single-btn" class="primary-btn">Estimate prediction</button>
-        <p class="form-footnote">Runs the values through <code>exoplanet_xgb_pipeline.joblib</code> on the server.</p>
-      </form>
-      <div class="ai-results" id="single-results"></div>
-    </article>
-  </div>
-</section>'@;
 
-$script = @'
-<script type="module">
-  const endpoint = '/api/predict.json';
-  const batchForm = document.getElementById('batch-form');
-  const previewBtn = document.getElementById('preview-btn');
-  const batchResults = document.getElementById('batch-results');
-  const singleBtn = document.getElementById('single-btn');
-  const singleResults = document.getElementById('single-results');
+        <div class="ai-module">
+          <article class="ai-option">
+            <h3>1. Upload light-curve table</h3>
+            <p>CSV with one row per observation. Required headers shown in the schema.</p>
+            <form class="ai-form" id="batch-form" aria-label="Batch exoplanet upload">
+              <label class="form-label" for="candidate-file">Upload CSV</label>
+              <input class="file-input" id="candidate-file" name="candidate-file" type="file" accept=".csv,.tsv,.txt" />
+              <details class="schema">
+                <summary>Expected columns</summary>
+                <ul>
+                  <li><code>orbital_period_days</code></li>
+                  <li><code>transit_duration_hrs</code></li>
+                  <li><code>transit_depth_pct</code></li>
+                  <li><code>stellar_temp_k</code></li>
+                  <li><code>stellar_radius_solar</code></li>
+                  <li><code>flux_variability</code></li>
+                  <li><code>signal_to_noise</code></li>
+                </ul>
+              </details>
+              <button type="button" id="preview-btn" class="ghost-btn">Predict for table</button>
+            </form>
+            <div class="ai-results" id="batch-results"></div>
+          </article>
 
-  function renderError(container, msg) {
-    container.innerHTML = `<div class="result-card result-error">${msg}</div>`;
-  }
-  function renderBatch(container, data) {
-    try {
-      const preds = data.predictions || data;
-      if (!preds || !preds.predictions) {
-        if (Array.isArray(preds)) {
-          // plain array fallback
-          container.innerHTML = preds.map((p, i) => `<div class="result-card">Row ${i+1}: label <strong>${p.label}</strong>${p.prob != null ? ` · prob ${p.prob.toFixed(3)}` : ''}</div>`).join('');
-          return;
-        }
-      }
-      const items = preds.predictions || [];
-      if (!items.length) { container.innerHTML = '<div class="result-card">No predictions</div>'; return; }
-      const rows = items.map((p, i) => `<tr><td>${i+1}</td><td>${p.label}</td><td>${p.prob != null ? p.prob.toFixed(4) : '—'}</td></tr>`).join('');
-      container.innerHTML = `
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>#</th><th>Label</th><th>Prob</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>`;
-    } catch (e) {
-      renderError(container, 'Failed to render predictions');
-    }
-  }
-  function renderSingle(container, data) {
-    try {
-      const preds = data.predictions || data;
-      const item = Array.isArray(preds.predictions) ? preds.predictions[0] : (Array.isArray(preds) ? preds[0] : preds);
-      if (!item) { container.innerHTML = '<div class="result-card">No prediction</div>'; return; }
-      container.innerHTML = `<div class="result-card">Prediction: <strong>${item.label}</strong>${item.prob != null ? ` · probability ${item.prob.toFixed(4)}` : ''}</div>`;
-    } catch (e) {
-      renderError(container, 'Failed to render prediction');
-    }
-  }
-  async function postJSON(rows) {
-    const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) });
-    return res.json();
-  }
+          <article class="ai-option">
+            <h3>2. Evaluate a single candidate</h3>
+            <p>Adjust the controls to shape a candidate and estimate its likelihood.</p>
+                        <div class="feature-stack">
+              <label class="feature-block" data-key="orbital_period_days" data-label="Orbital period (days)">
+                <span class="feature-label">Orbital period (days)</span>
+                <div class="input-row">
+                  <input type="range" class="feature-slider" id="slider_orbital_period_days" min="0" max="400" step="0.1" value="12.34" />
+                  <input type="number" class="feature-input" id="f_orbital_period_days" step="0.1" value="12.34" />
+                </div>
+                <span class="range-hint">0 - 400 days</span>
+              </label>
 
-  previewBtn?.addEventListener('click', async () => {
-    batchResults.innerHTML = '<div class="result-card">Processing…</div>';
-    const file = document.getElementById('candidate-file')?.files?.[0];
-    if (!file) { renderError(batchResults, 'Please select a CSV file.'); return; }
-    const formData = new FormData();
-    formData.append('candidate-file', file);
-    try {
-      const res = await fetch(endpoint, { method: 'POST', body: formData });
-      const data = await res.json();
-      if (!res.ok) { renderError(batchResults, data.error || 'Server error'); return; }
-      renderBatch(batchResults, data);
-    } catch (e) {
-      renderError(batchResults, 'Network or server error');
-    }
-  });
+              <label class="feature-block" data-key="transit_duration_hrs" data-label="Transit duration (hrs)">
+                <span class="feature-label">Transit duration (hrs)</span>
+                <div class="input-row">
+                  <input type="range" class="feature-slider" id="slider_transit_duration_hrs" min="0" max="24" step="0.05" value="1.8" />
+                  <input type="number" class="feature-input" id="f_transit_duration_hrs" step="0.05" value="1.8" />
+                </div>
+                <span class="range-hint">0 - 24 hours</span>
+              </label>
 
-  singleBtn?.addEventListener('click', async () => {
-    singleResults.innerHTML = '<div class="result-card">Processing…</div>';
-    const getNum = (id) => { const v = (document.getElementById(id)?.value || '').trim(); const n = Number(v); return Number.isFinite(n) ? n : null; };
-    const row = {
-      orbital_period_days: getNum('f_orbital_period_days'),
-      transit_duration_hrs: getNum('f_transit_duration_hrs'),
-      transit_depth_pct: getNum('f_transit_depth_pct'),
-      stellar_temp_k: getNum('f_stellar_temp_k'),
-      stellar_radius_solar: getNum('f_stellar_radius_solar'),
-      flux_variability: getNum('f_flux_variability'),
-      signal_to_noise: getNum('f_signal_to_noise'),
-    };
-    try {
-      const data = await postJSON([row]);
-      if (data.error) { renderError(singleResults, data.error); return; }
-      renderSingle(singleResults, data);
-    } catch (e) {
-      renderError(singleResults, 'Network or server error');
-    }
-  });
-</script>
+              <label class="feature-block" data-key="transit_depth_pct" data-label="Transit depth (%)">
+                <span class="feature-label">Transit depth (%)</span>
+                <div class="input-row">
+                  <input type="range" class="feature-slider" id="slider_transit_depth_pct" min="0" max="5" step="0.001" value="0.15" />
+                  <input type="number" class="feature-input" id="f_transit_depth_pct" step="0.001" value="0.15" />
+                </div>
+                <span class="range-hint">0 - 5 %</span>
+              </label>
 
+              <label class="feature-block" data-key="stellar_temp_k" data-label="Stellar temperature (K)">
+                <span class="feature-label">Stellar temperature (K)</span>
+                <div class="input-row">
+                  <input type="range" class="feature-slider" id="slider_stellar_temp_k" min="2500" max="12000" step="10" value="5780" />
+                  <input type="number" class="feature-input" id="f_stellar_temp_k" step="10" value="5780" />
+                </div>
+                <span class="range-hint">2,500 - 12,000 K</span>
+              </label>
+
+              <label class="feature-block" data-key="stellar_radius_solar" data-label="Stellar radius (R_sun)">
+                <span class="feature-label">Stellar radius (R_sun)</span>
+                <div class="input-row">
+                  <input type="range" class="feature-slider" id="slider_stellar_radius_solar" min="0.1" max="5" step="0.01" value="1.05" />
+                  <input type="number" class="feature-input" id="f_stellar_radius_solar" step="0.01" value="1.05" />
+                </div>
+                <span class="range-hint">0.1 - 5 R_sun</span>
+              </label>
+
+              <label class="feature-block" data-key="flux_variability" data-label="Flux variability">
+                <span class="feature-label">Flux variability</span>
+                <div class="input-row">
+                  <input type="range" class="feature-slider" id="slider_flux_variability" min="0" max="0.1" step="0.001" value="0.012" />
+                  <input type="number" class="feature-input" id="f_flux_variability" step="0.001" value="0.012" />
+                </div>
+                <span class="range-hint">0 - 0.1</span>
+              </label>
+
+              <label class="feature-block" data-key="signal_to_noise" data-label="Signal-to-noise ratio">
+                <span class="feature-label">Signal-to-noise ratio</span>
+                <div class="input-row">
+                  <input type="range" class="feature-slider" id="slider_signal_to_noise" min="0" max="100" step="0.1" value="32.7" />
+                  <input type="number" class="feature-input" id="f_signal_to_noise" step="0.1" value="32.7" />
+                </div>
+                <span class="range-hint">0 - 100</span>
+              </label>
+            </div>
+            <div class="chart-card">
+              <div class="chart-tabs" role="tablist" aria-label="Chart type">
+                <button type="button" class="tab-btn is-active" data-chart="radar" role="tab" aria-selected="true">Radar</button>
+                <button type="button" class="tab-btn" data-chart="bars" role="tab" aria-selected="false">Bars</button>
+              </div>
+              <div class="chart-frame" id="radar-frame">
+                <canvas id="candidate-chart"></canvas>
+              </div>
+              <div class="chart-frame is-hidden" id="bars-frame">
+                <canvas id="bars-chart"></canvas>
+              </div>
+              <p class="chart-footnote">Switch chart tabs or click data points to focus a feature.</p>
+            </div>
+            <button type="button" id="single-btn" class="primary-btn">Estimate prediction</button>
+
+            <p class="form-footnote">Runs the values through <code>exoplanet_xgb_pipeline.joblib</code> on the server.</p>
+            <div class="ai-results" id="single-results"></div>
+          </article>
+        </div>
+      </section>
+
+
+      
       <section class="section two-column" id="workflow">
         <div>
-          <h2>Mission objectives</h2>
-          <ul>
-            <li>Accelerate candidate discovery without sacrificing scientific rigor.</li>
-            <li>Highlight the most habitable prospects through contextual scoring.</li>
-            <li>Equip outreach teams with engaging, trustworthy findings.</li>
-          </ul>
+          <h2>Exoplanets</h2>
+          <p>
+            In 1584, an Italian philosopher named Giordano Bruno dared to conjecture that, beyond the planets known to Roman tradition (Mercury, Venus, Mars, Jupiter, and Saturn), there existed infinite planets around the infinite points that filled the celestial sphere.
+          </p>
+          <p>
+            Despite the misfortune and censorship that his contrasting ideas provoked, they endured in the scientific imagination for centuries until his long-denied hypothesis was confirmed in 1992 by Aleksander Wolszczan and Dale Frail. With the discovery of the first exoplanet&mdash;the name given to planetary bodies beyond the Solar System&mdash;our view of the universe changed radically and a new branch of science opened: exoplanetary astronomy. Today we know of more than 5,000 exoplanets, an achievement that required machines in space and human ingenuity on Earth.
+          </p>
+          <p>
+            However, just as there are many discovered exoplanets, an infinity still waits to be found. The vast amounts of data provided by telescopes make the task of analyzing every potential hint of a planet orbiting a star other than the Sun arduous, if not unattainable.
+          </p>
+          <p>
+            With new technological revolutions and the immense development of Artificial Intelligence, automated tasks lighten researchers' workload&mdash;and, more importantly, they enable discoveries that would be nearly impossible through human effort alone.
+          </p>
+          <h3 class="haj">How do you discover an exoplanet?</h3>
+          <p>
+            A light bulb, under normal conditions, should stay on without difficulty. If we see the bulb dim, it may have been caused by an electrical issue or because something blocked the bulb from our point of view. If the bulb dims again, there might already be a structural problem. If it happens yet again, it is time to analyze what is going on.
+          </p>
+          <p>
+            For stars, the most common scenario is that they can maintain their brightness for billions of years&mdash;a span that is practically infinite on human timescales. Therefore, when scientists observe a star dimming, it becomes a subject of serious study. A star can vary its brightness because of its own conditions, because it shares an orbit with another star, or&mdash;most importantly&mdash;because a planet is orbiting it.
+          </p>
+          <p>
+            When an exoplanet passes in front of a star, the same thing happens as when a fly or object temporarily blocks a light bulb: the brightness decreases. This drop, known scientifically as a light curve, allows scientists to tell whether an exoplanet is present, and it even reveals how large the planet is and how it orbits its star.
+          </p>
+          <h3 class="haj">What are we doing?</h3>
+          <p>
+            Within the Argonautas initiative, we harness the best of machine learning and astronomy to facilitate the study of confirmed, candidate, and rejected exoplanets, while also making the process of scientific discovery more accessible to everyone.
+          </p>
         </div>
         <div>
-          <h2>AI workflow</h2>
           <ul>
-            <li>Ingest NASA archives via Astroquery, clean artefacts, and enrich with engineered features.</li>
-            <li>Score candidates with the downloadable XGBoost pipeline and attach SHAP-based justifications.</li>
-            <li>Publish narrative briefs and visual assets for scientists, educators, and storytellers.</li>
+            <img src="/imagen-1.webp" alt="peak image">
+            <img src="/imagen-2.webp" alt="peak image">
+            <img src="/imagen-3.webp" alt="peak image">
           </ul>
         </div>
       </section>
+      
+
+      <script type="module">
+        const endpoint = "/api/predict.json";
+        const sections = {
+          ai: document.getElementById("ai"),
+          workflow: document.getElementById("workflow"),
+        };
+        const toggles = Array.from(document.querySelectorAll(".section-toggle"));
+        const featureBlocks = Array.from(document.querySelectorAll(".feature-block"));
+        const featureDefs = featureBlocks
+          .map((block) => {
+            const key = block.getAttribute("data-key");
+            const label = block.getAttribute("data-label") || key;
+            const slider = block.querySelector(".feature-slider");
+            const input = block.querySelector(".feature-input");
+            const min = Number(slider?.min ?? 0);
+            const max = Number(slider?.max ?? 1);
+            if (!slider || !input) return null;
+            if (input.value === "") input.value = slider.value;
+            return { key, label, slider, input, min, max, block };
+          })
+          .filter(Boolean);
+
+        const units = {
+          orbital_period_days: "days",
+          transit_duration_hrs: "hrs",
+          transit_depth_pct: "%",
+          stellar_temp_k: "K",
+          stellar_radius_solar: "R_sun",
+          flux_variability: "",
+          signal_to_noise: "SNR",
+        };
+        const formatValue = (key, value) => `${value}${units[key] ? " " + units[key] : ""}`;
+
+        const chartTabs = Array.from(document.querySelectorAll(".chart-tabs .tab-btn"));
+        const radarFrame = document.getElementById("radar-frame");
+        const barsFrame = document.getElementById("bars-frame");
+        const radarCanvas = document.getElementById("candidate-chart");
+        const barsCanvas = document.getElementById("bars-chart");
+        const chartLabels = featureDefs.map((item) => item.label);
+
+        let chartPromise;
+        let radarChart;
+        let barsChart;
+        let activeBlock = null;
+
+        const loadChartJs = () => {
+          if (typeof window === "undefined") return Promise.resolve(null);
+          if (window.Chart) return Promise.resolve(window.Chart);
+          if (!chartPromise) {
+            const existing = document.querySelector("script[data-chartjs]");
+            if (existing) {
+              chartPromise = new Promise((resolve, reject) => {
+                if (window.Chart) {
+                  resolve(window.Chart);
+                  return;
+                }
+                existing.addEventListener(
+                  "load",
+                  () => resolve(window.Chart || null),
+                  { once: true },
+                );
+                existing.addEventListener(
+                  "error",
+                  () => reject(new Error("Failed to load Chart.js")),
+                  { once: true },
+                );
+              });
+            } else {
+              chartPromise = new Promise((resolve, reject) => {
+                const script = document.createElement("script");
+                script.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js";
+                script.async = true;
+                script.dataset.chartjs = "true";
+                script.onload = () => resolve(window.Chart || null);
+                script.onerror = () => reject(new Error("Failed to load Chart.js"));
+                document.head.appendChild(script);
+              });
+            }
+            chartPromise = chartPromise.catch((error) => {
+              console.warn(error);
+              chartPromise = null;
+              return null;
+            });
+          }
+          return chartPromise;
+        };
+
+        const setActiveFeature = (block) => {
+          if (activeBlock === block) return;
+          if (activeBlock) activeBlock.classList.remove("is-active");
+          if (block) {
+            block.classList.add("is-active");
+            activeBlock = block;
+          }
+        };
+
+        const computeNormalized = () =>
+          featureDefs.map(({ slider, min, max }) => {
+            const value = Number(slider.value);
+            if (!Number.isFinite(value) || max <= min) return 0;
+            return Math.max(0, Math.min(1, (value - min) / (max - min)));
+          });
+
+        const ensureCharts = async () => {
+          const ChartCtor = await loadChartJs();
+          const ChartClass = ChartCtor?.Chart || ChartCtor;
+          if (!ChartClass) return null;
+          if (radarCanvas && !radarChart) {
+            radarChart = new ChartClass(radarCanvas, {
+              type: "radar",
+              data: { labels: chartLabels, datasets: [{
+                label: "Candidate",
+                data: [],
+                backgroundColor: "rgba(72, 214, 233, 0.25)",
+                borderColor: "rgba(72, 214, 233, 0.85)",
+                borderWidth: 2,
+                pointBackgroundColor: "rgba(72, 214, 233, 1)",
+                pointRadius: 4,
+                pointHoverRadius: 6,
+              }] },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                  r: {
+                    min: 0,
+                    max: 1,
+                    ticks: { display: false },
+                    grid: { color: "rgba(244, 246, 250, 0.12)" },
+                    angleLines: { color: "rgba(244, 246, 250, 0.12)" },
+                  },
+                },
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: (ctx) => {
+                        const def = featureDefs[ctx.dataIndex];
+                        const val = Number(def?.slider?.value ?? 0);
+                        return `${ctx.formattedValue} (actual: ${formatValue(def?.key, val)})`;
+                      },
+                    },
+                  },
+                },
+                onClick: (_, elements) => {
+                  if (!elements?.length) return;
+                  const def = featureDefs[elements[0].index];
+                  if (!def) return;
+                  setActiveFeature(def.block);
+                  def.slider.focus();
+                  def.block.scrollIntoView({ behavior: "smooth", block: "center" });
+                },
+              },
+            });
+          }
+          if (barsCanvas && !barsChart) {
+            barsChart = new ChartClass(barsCanvas, {
+              type: "bar",
+              data: { labels: chartLabels, datasets: [{
+                label: "Normalized",
+                data: [],
+                backgroundColor: "rgba(72,214,233,0.55)",
+                borderColor: "rgba(72,214,233,0.95)",
+              }] },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: "y",
+                animation: false,
+                scales: {
+                  x: { min: 0, max: 1, grid: { color: "rgba(244, 246, 250, 0.12)" } },
+                  y: { grid: { display: false } },
+                },
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: (ctx) => {
+                        const def = featureDefs[ctx.dataIndex];
+                        const val = Number(def?.slider?.value ?? 0);
+                        return `${ctx.formattedValue} (actual: ${formatValue(def?.key, val)})`;
+                      },
+                    },
+                  },
+                },
+                onClick: (_, elements) => {
+                  if (!elements?.length) return;
+                  const def = featureDefs[elements[0].index];
+                  if (!def) return;
+                  setActiveFeature(def.block);
+                  def.slider.focus();
+                  def.block.scrollIntoView({ behavior: "smooth", block: "center" });
+                },
+              },
+            });
+          }
+          return ChartClass;
+        };
+
+        const updateCharts = () => {
+          ensureCharts()
+            .then((ChartClass) => {
+              if (!ChartClass) return;
+              const data = computeNormalized();
+              if (radarChart) {
+                radarChart.data.labels = chartLabels;
+                radarChart.data.datasets[0].data = data;
+                radarChart.update("none");
+              }
+              if (barsChart) {
+                barsChart.data.labels = chartLabels;
+                barsChart.data.datasets[0].data = data;
+                barsChart.update("none");
+              }
+            })
+            .catch((error) => {
+              console.warn('Chart update failed', error);
+            });
+        };
+
+        chartTabs.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            if (btn.classList.contains("is-active")) return;
+            chartTabs.forEach((tab) => {
+              const isActive = tab === btn;
+              tab.classList.toggle("is-active", isActive);
+              tab.setAttribute("aria-selected", isActive ? "true" : "false");
+            });
+            const showBars = btn.dataset.chart === "bars";
+            barsFrame.classList.toggle("is-hidden", !showBars);
+            radarFrame.classList.toggle("is-hidden", showBars);
+            updateCharts();
+          });
+        });
+
+        featureDefs.forEach(({ slider, input, min, max, block }) => {
+          const syncValue = (value) => {
+            const fixed = value.toString();
+            slider.value = fixed;
+            input.value = fixed;
+          };
+
+          slider.addEventListener("input", () => {
+            const val = Number(slider.value);
+            input.value = val.toString();
+            setActiveFeature(block);
+            updateCharts();
+          });
+
+          input.addEventListener("input", () => {
+            const raw = Number(input.value);
+            if (!Number.isFinite(raw)) return;
+            const clamped = Math.min(Math.max(raw, min), max);
+            syncValue(clamped);
+            setActiveFeature(block);
+            updateCharts();
+          });
+
+          input.addEventListener("blur", () => {
+            const raw = Number(input.value);
+            const clamped = Number.isFinite(raw) ? Math.min(Math.max(raw, min), max) : Number(slider.value);
+            syncValue(clamped);
+            updateCharts();
+          });
+        });
+
+        if (featureDefs.length) {
+          setActiveFeature(featureDefs[0].block);
+        }
+        updateCharts();
+
+        const showSection = (target, { scroll = true } = {}) => {
+          if (!sections[target]) return;
+          Object.entries(sections).forEach(([key, section]) => {
+            if (!section) return;
+            section.classList.toggle("is-hidden", key !== target);
+          });
+          toggles.forEach((btn) => {
+            const isActive = btn.dataset.target === target;
+            btn.classList.toggle("is-active", isActive);
+            btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+          });
+          if (scroll) {
+            sections[target].scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+          if (target === "ai") {
+            updateCharts();
+          }
+        };
+
+        showSection("workflow", { scroll: false });
+
+        toggles.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const target = btn.dataset.target || "workflow";
+            if (btn.classList.contains("is-active")) return;
+            showSection(target);
+          });
+        });
+
+        const renderError = (container, msg) => {
+          container.innerHTML = '<div class="result-card result-error">' + msg + '</div>';
+        };
+
+        const renderBatch = (container, data) => {
+          try {
+            const preds = data.predictions || data;
+            const items = Array.isArray(preds?.predictions) ? preds.predictions : Array.isArray(preds) ? preds : [];
+            if (!items.length) {
+              container.innerHTML = '<div class="result-card">No predictions</div>';
+              return;
+            }
+            const rows = items
+              .map((p, index) => {
+                const prob = Number.isFinite(Number(p.prob)) ? Number(p.prob).toFixed(4) : 'n/a';
+                return '<tr><td>' + (index + 1) + '</td><td>' + p.label + '</td><td>' + prob + '</td></tr>';
+              })
+              .join('');
+            container.innerHTML = '<div class="table-scroll"><table><thead><tr><th>#</th><th>Label</th><th>Prob</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+          } catch (error) {
+            renderError(container, 'Failed to render predictions');
+          }
+        };
+
+        const renderSingle = (container, data) => {
+          try {
+            const preds = data.predictions || data;
+            const item = Array.isArray(preds?.predictions) ? preds.predictions[0] : Array.isArray(preds) ? preds[0] : preds;
+            if (!item) {
+              container.innerHTML = '<div class="result-card">No prediction</div>';
+              return;
+            }
+            const prob = Number.isFinite(Number(item.prob)) ? Number(item.prob).toFixed(4) : 'n/a';
+            container.innerHTML = '<div class="result-card">Prediction: <strong>' + item.label + '</strong> - probability ' + prob + '</div>';
+          } catch (error) {
+            renderError(container, 'Failed to render prediction');
+          }
+        };
+
+        const postJSON = async (rows) => {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rows }),
+          });
+          const payload = await response.json();
+          if (!response.ok) {
+            throw new Error(payload.error || 'Server error');
+          }
+          return payload;
+        };
+
+        const previewBtn = document.getElementById('preview-btn');
+        const batchResults = document.getElementById('batch-results');
+        previewBtn?.addEventListener('click', async () => {
+          batchResults.innerHTML = '<div class="result-card">Processing...</div>';
+          const fileInput = document.getElementById('candidate-file');
+          const file = fileInput?.files?.[0] ?? null;
+          if (!file) {
+            renderError(batchResults, 'Please select a CSV file.');
+            return;
+          }
+          const formData = new FormData();
+          formData.append('candidate-file', file);
+          try {
+            const response = await fetch(endpoint, { method: 'POST', body: formData });
+            const data = await response.json();
+            if (!response.ok) {
+              renderError(batchResults, data.error || 'Server error');
+              return;
+            }
+            renderBatch(batchResults, data);
+          } catch (error) {
+            renderError(batchResults, 'Network or server error');
+          }
+        });
+
+        const singleBtn = document.getElementById('single-btn');
+        const singleResults = document.getElementById('single-results');
+        singleBtn?.addEventListener('click', async () => {
+          singleResults.innerHTML = '<div class="result-card">Processing...</div>';
+          const row = {};
+          featureDefs.forEach(({ key, slider }) => {
+            row[key] = Number(slider.value);
+          });
+          try {
+            const data = await postJSON([row]);
+            renderSingle(singleResults, data);
+          } catch (error) {
+            renderError(singleResults, error.message || 'Server error');
+          }
+        });
+      </script>
 
       <p class="footer-note">Draft submission - Argonautas - A World Away - Powered by open NASA data and human curiosity.</p>
     </main>
-  
-</body>
+  </body>
 </html>
-
+<style>
+  .haj{
+    padding-top: 20px;
+  }
+</style>
