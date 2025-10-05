@@ -45,17 +45,16 @@ body::before {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.65;
-  will-change: transform;
+  opacity: 0.55;
+  will-change: background-position;
   background-image:
-    radial-gradient(circle at 20px 40px, rgba(244,246,250,.8) 1px, transparent 2px),
-    radial-gradient(circle at 140px 160px, rgba(72,214,233,.6) 1px, transparent 2.2px),
-    radial-gradient(circle at 300px 260px, rgba(244,246,250,.7) 1px, transparent 2px),
-    radial-gradient(circle at 460px 80px, rgba(72,214,233,.55) 1px, transparent 2.2px),
-    radial-gradient(circle at 520px 520px, rgba(255,255,255,.45) 1px, transparent 2px),
-    radial-gradient(circle at 80px 520px, rgba(200,230,255,.35) 1px, transparent 2px);
-  background-size: 800px 800px;
-  animation: driftFar 120s linear infinite;
+    radial-gradient(circle at 20px 40px, rgba(244,246,250,.65) 1px, transparent 2px),
+    radial-gradient(circle at 300px 260px, rgba(72,214,233,.4) 1px, transparent 2.4px),
+    radial-gradient(circle at 520px 520px, rgba(255,255,255,.5) 1px, transparent 2.2px);
+  background-size: 780px 780px;
+  background-repeat: repeat;
+  background-position: 0 0, 0 0, 0 0;
+  animation: driftFar 110s linear infinite;
 }
 
 body::after {
@@ -64,45 +63,42 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.9;
-  will-change: transform, opacity;
+  opacity: 0.75;
+  will-change: background-position;
   background-image:
-    radial-gradient(circle at 100px 100px, rgba(255,255,255,.9) 1.5px, transparent 2.5px),
-    radial-gradient(circle at 260px 200px, rgba(180,230,255,.8) 1.5px, transparent 2.5px),
-    radial-gradient(circle at 420px 320px, rgba(255,255,255,.85) 1.8px, transparent 2.8px),
-    radial-gradient(circle at 540px 40px, rgba(160,220,255,.75) 1.6px, transparent 2.6px),
-    radial-gradient(circle at 40px 300px, rgba(255,255,255,.8) 1.5px, transparent 2.5px),
-    radial-gradient(circle at 300px 520px, rgba(200,240,255,.8) 1.6px, transparent 2.6px);
-  background-size: 500px 500px;
+    radial-gradient(circle at 100px 100px, rgba(255,255,255,.8) 1.5px, transparent 2.5px),
+    radial-gradient(circle at 420px 320px, rgba(180,230,255,.65) 1.4px, transparent 2.4px),
+    radial-gradient(circle at 40px 300px, rgba(255,255,255,.7) 1.3px, transparent 2.3px);
+  background-size: 520px 520px;
+  background-repeat: repeat;
+  background-position: 0 0, 0 0, 0 0;
   animation:
-    driftNear 60s linear infinite,
-    twinkle 3.5s ease-in-out infinite alternate;
+    driftNear 70s linear infinite,
+    twinkle 4s ease-in-out infinite alternate;
 }
 
 @keyframes driftFar {
-  	from{ 
-		transform: translate3d(0, 0, 0); 
-	}
-  	to{ 
-		transform: translate3d(0, 800px, 0); 
-	}
+  from {
+    background-position: 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 0 780px, -140px 720px, 90px 700px;
+  }
 }
-
 @keyframes driftNear {
-  	from{ 
-		transform: translate3d(0, 0, 0); 
-	}
-  	to{
-		transform: translate3d(-200px, 500px, 0); 
-	}
+  from {
+    background-position: 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: -100px 520px, 120px 490px, -60px 460px;
+  }
 }
 
 @keyframes twinkle {
-  0%   { opacity: 0.85; filter: brightness(0.95); }
-  60%  { opacity: 1;    filter: none; }
-  100% { opacity: 0.75; filter: brightness(0.9); }
+  0%   { opacity: 0.7; }
+  50%  { opacity: 0.95; }
+  100% { opacity: 0.65; }
 }
-
 main {
 	margin: 0;
 	position: relative;
@@ -415,3 +411,10 @@ hr {
   	clip-path: inset(50%);
   	white-space: nowrap;
 }
+
+
+
+
+
+
+
