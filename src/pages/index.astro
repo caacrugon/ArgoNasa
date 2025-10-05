@@ -16,19 +16,175 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
         <span class="mission-tag">NASA Space Apps Challenge 2025</span>
         <h1>A World Away: Intelligent Exoplanet Hunter</h1>
         <p>
-          Our Argonautas team combines NASA's open light-curve archives with explainable AI to rapidly surface
-          exoplanet candidates and deliver story-driven insights that empower mission scientists and citizen
-          astronomers alike.
+          Our Argonautas crew blends NASA light-curve archives with explainable AI to surface exoplanet
+          candidates fast, then delivers stories and visuals that keep scientists and citizen astronomers in sync.
         </p>
         <div class="hero-actions">
-          <a href="#prototype">Explore the prototype</a>
-          <a href="#workflow">View the AI workflow</a>
+          <a href="#ai">Test the AI toolkit</a>
+          <a href="#workflow">View the mission workflow</a>
         </div>
       </section>
 
-      <section class="section" id="prototype">
-        <h2>AI</h2>
-      </section>
+      <section class="section" id="ai">
+  <h2>Exoplanet AI toolkit</h2>
+  <p>
+    Download the production <strong>XGBoost light-curve classifier</strong> and run it locally or in your
+    own cloud notebook. Use the interface below to run a batch upload or a single-candidate review.
+  </p>
+  <div class="ai-download">
+    <a class="download-chip" href="/models/exoplanet_xgb_pipeline.joblib" download>
+      exoplanet_xgb_pipeline.joblib
+    </a>
+    <span class="download-hint">Trained on confirmed Kepler & TESS transits - 7 engineered features</span>
+  </div>
+
+  <div class="ai-module">
+    <article class="ai-option">
+      <h3>1. Upload light-curve table</h3>
+      <p>CSV with one row per observation. Required headers shown in the schema.</p>
+      <form class="ai-form" id="batch-form" aria-label="Batch exoplanet upload">
+        <label class="form-label" for="candidate-file">Upload CSV</label>
+        <input class="file-input" id="candidate-file" name="candidate-file" type="file" accept=".csv,.tsv,.txt" />
+        <details class="schema">
+          <summary>Expected columns</summary>
+          <ul>
+            <li><code>orbital_period_days</code></li>
+            <li><code>transit_duration_hrs</code></li>
+            <li><code>transit_depth_pct</code></li>
+            <li><code>stellar_temp_k</code></li>
+            <li><code>stellar_radius_solar</code></li>
+            <li><code>flux_variability</code></li>
+            <li><code>signal_to_noise</code></li>
+          </ul>
+        </details>
+        <button type="button" id="preview-btn" class="ghost-btn">Predict for table</button>
+      </form>
+      <div class="ai-results" id="batch-results"></div>
+    </article>
+
+    <article class="ai-option">
+      <h3>2. Evaluate a single candidate</h3>
+      <p>Enter measurements to estimate a single prediction.</p>
+      <form class="ai-form" id="single-form" aria-label="Manual exoplanet candidate entry">
+        <div class="field-grid">
+          <label>Orbital period (days)
+            <input id="f_orbital_period_days" type="number" step="0.01" placeholder="12.34" />
+          </label>
+          <label>Transit duration (hrs)
+            <input id="f_transit_duration_hrs" type="number" step="0.01" placeholder="1.8" />
+          </label>
+          <label>Transit depth (%)
+            <input id="f_transit_depth_pct" type="number" step="0.001" placeholder="0.15" />
+          </label>
+          <label>Stellar temperature (K)
+            <input id="f_stellar_temp_k" type="number" step="1" placeholder="5780" />
+          </label>
+          <label>Stellar radius (R_sun)
+            <input id="f_stellar_radius_solar" type="number" step="0.01" placeholder="1.05" />
+          </label>
+          <label>Flux variability
+            <input id="f_flux_variability" type="number" step="0.001" placeholder="0.012" />
+          </label>
+          <label>Signal-to-noise ratio
+            <input id="f_signal_to_noise" type="number" step="0.1" placeholder="32.7" />
+          </label>
+        </div>
+        <button type="button" id="single-btn" class="primary-btn">Estimate prediction</button>
+        <p class="form-footnote">Runs the values through <code>exoplanet_xgb_pipeline.joblib</code> on the server.</p>
+      </form>
+      <div class="ai-results" id="single-results"></div>
+    </article>
+  </div>
+</section>'@;
+
+$script = @'
+<script type="module">
+  const endpoint = '/api/predict.json';
+  const batchForm = document.getElementById('batch-form');
+  const previewBtn = document.getElementById('preview-btn');
+  const batchResults = document.getElementById('batch-results');
+  const singleBtn = document.getElementById('single-btn');
+  const singleResults = document.getElementById('single-results');
+
+  function renderError(container, msg) {
+    container.innerHTML = `<div class="result-card result-error">${msg}</div>`;
+  }
+  function renderBatch(container, data) {
+    try {
+      const preds = data.predictions || data;
+      if (!preds || !preds.predictions) {
+        if (Array.isArray(preds)) {
+          // plain array fallback
+          container.innerHTML = preds.map((p, i) => `<div class="result-card">Row ${i+1}: label <strong>${p.label}</strong>${p.prob != null ? ` · prob ${p.prob.toFixed(3)}` : ''}</div>`).join('');
+          return;
+        }
+      }
+      const items = preds.predictions || [];
+      if (!items.length) { container.innerHTML = '<div class="result-card">No predictions</div>'; return; }
+      const rows = items.map((p, i) => `<tr><td>${i+1}</td><td>${p.label}</td><td>${p.prob != null ? p.prob.toFixed(4) : '—'}</td></tr>`).join('');
+      container.innerHTML = `
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>#</th><th>Label</th><th>Prob</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    } catch (e) {
+      renderError(container, 'Failed to render predictions');
+    }
+  }
+  function renderSingle(container, data) {
+    try {
+      const preds = data.predictions || data;
+      const item = Array.isArray(preds.predictions) ? preds.predictions[0] : (Array.isArray(preds) ? preds[0] : preds);
+      if (!item) { container.innerHTML = '<div class="result-card">No prediction</div>'; return; }
+      container.innerHTML = `<div class="result-card">Prediction: <strong>${item.label}</strong>${item.prob != null ? ` · probability ${item.prob.toFixed(4)}` : ''}</div>`;
+    } catch (e) {
+      renderError(container, 'Failed to render prediction');
+    }
+  }
+  async function postJSON(rows) {
+    const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) });
+    return res.json();
+  }
+
+  previewBtn?.addEventListener('click', async () => {
+    batchResults.innerHTML = '<div class="result-card">Processing…</div>';
+    const file = document.getElementById('candidate-file')?.files?.[0];
+    if (!file) { renderError(batchResults, 'Please select a CSV file.'); return; }
+    const formData = new FormData();
+    formData.append('candidate-file', file);
+    try {
+      const res = await fetch(endpoint, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) { renderError(batchResults, data.error || 'Server error'); return; }
+      renderBatch(batchResults, data);
+    } catch (e) {
+      renderError(batchResults, 'Network or server error');
+    }
+  });
+
+  singleBtn?.addEventListener('click', async () => {
+    singleResults.innerHTML = '<div class="result-card">Processing…</div>';
+    const getNum = (id) => { const v = (document.getElementById(id)?.value || '').trim(); const n = Number(v); return Number.isFinite(n) ? n : null; };
+    const row = {
+      orbital_period_days: getNum('f_orbital_period_days'),
+      transit_duration_hrs: getNum('f_transit_duration_hrs'),
+      transit_depth_pct: getNum('f_transit_depth_pct'),
+      stellar_temp_k: getNum('f_stellar_temp_k'),
+      stellar_radius_solar: getNum('f_stellar_radius_solar'),
+      flux_variability: getNum('f_flux_variability'),
+      signal_to_noise: getNum('f_signal_to_noise'),
+    };
+    try {
+      const data = await postJSON([row]);
+      if (data.error) { renderError(singleResults, data.error); return; }
+      renderSingle(singleResults, data);
+    } catch (e) {
+      renderError(singleResults, 'Network or server error');
+    }
+  });
+</script>
 
       <section class="section two-column" id="workflow">
         <div>
@@ -42,14 +198,16 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
         <div>
           <h2>AI workflow</h2>
           <ul>
-            <li>Ingest NASA archives.</li>
-            <li>Detect transits using a convolutional transformer tuned on confirmed exoplanets.</li>
-            <li>Summarize discoveries with a fine-tuned language model and validate with domain prompts.</li>
+            <li>Ingest NASA archives via Astroquery, clean artefacts, and enrich with engineered features.</li>
+            <li>Score candidates with the downloadable XGBoost pipeline and attach SHAP-based justifications.</li>
+            <li>Publish narrative briefs and visual assets for scientists, educators, and storytellers.</li>
           </ul>
         </div>
       </section>
 
       <p class="footer-note">Draft submission - Argonautas - A World Away - Powered by open NASA data and human curiosity.</p>
     </main>
-  </body>
+  
+</body>
 </html>
+

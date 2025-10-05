@@ -1,0 +1,6 @@
+﻿# Python runtime for the exoplanet inference hook
+joblib>=1.2
+pandas>=1.5
+scikit-learn>=1.2
+xgboost>=1.7
+numpy>=1.23
