@@ -21,7 +21,47 @@ function parseCsv(text: string) {
     });
     rows.push(obj);
   }
-  return rows.map((r) => FEATURE_ORDER.reduce((a,k)=>({ ...a, [k]: r[k] ?? null}), {} as any));
+  return rows.map((r) =>
+    FEATURE_ORDER.reduce((a, k) => ({ ...a, [k]: r[k] ?? null }), {} as any)
+  );
+}
+
+// ---- Normaliza la respuesta del modelo a { predictions: [{label, prob}] }
+function normalizeForUI(up: any) {
+  // Si ya viene en el formato esperado, pasa directo
+  if (Array.isArray(up?.predictions) && typeof up.predictions[0] === 'object') {
+    return { predictions: up.predictions };
+  }
+
+  // Caso típico: { prediction: [0,1,...], probability: [0.12, 0.87, ...] }
+  const toArr = (x: any) =>
+    Array.isArray(x) ? x : (x === undefined || x === null ? [] : [x]);
+
+  const preds = toArr(up?.prediction);
+  const probs = toArr(up?.probability);
+
+  if (preds.length) {
+    const LABELS = ['No exoplanet', 'Exoplanet'];
+    const items = preds.map((p: any, i: number) => {
+      const pn = typeof p === 'string' ? Number(p) : p;
+      const label =
+        pn === 0 || pn === 1 ? LABELS[pn] : (pn ?? '').toString();
+      const prob = probs[i] !== undefined && probs[i] !== null
+        ? Number(probs[i])
+        : null;
+      return { label, prob };
+    });
+    return { predictions: items };
+  }
+
+  // Último recurso: si es array plano, envuélvelo
+  if (Array.isArray(up)) {
+    return {
+      predictions: up.map((v: any) => ({ label: String(v), prob: null })),
+    };
+  }
+
+  return { predictions: [] };
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -39,18 +79,48 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   if (!rows.length) {
-    return new Response(JSON.stringify({ error: 'No data rows received' }), { status: 400, headers: { 'Content-Type': 'application/json' }});
+    return new Response(
+      JSON.stringify({ error: 'No data rows received' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
-  const resp = await fetch(`${import.meta.env.EXO_API_URL}/predict`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': import.meta.env.EXO_API_KEY
-    },
-    body: JSON.stringify({ rows })
-  });
+  const resp = await fetch(
+    `${import.meta.env.EXO_API_URL}/predict`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': import.meta.env.EXO_API_KEY,
+      },
+      body: JSON.stringify({ rows }),
+    }
+  );
 
   const text = await resp.text();
-  return new Response(text, { status: resp.status, headers: { 'Content-Type': 'application/json' }});
+
+  // Propaga errores de upstream tal cual
+  if (!resp.ok) {
+    return new Response(text, {
+      status: resp.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Intenta parsear y normaliza
+  let upstream: any;
+  try {
+    upstream = JSON.parse(text);
+  } catch {
+    return new Response(
+      JSON.stringify({ error: 'Bad JSON from model service', raw: text }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const normalized = normalizeForUI(upstream);
+  return new Response(JSON.stringify(normalized), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
 };
