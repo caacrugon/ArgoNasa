@@ -266,6 +266,103 @@ strong,b {
   color: rgba(244, 246, 250, 0.7);
 }
 
+.download-chip.is-active {
+  background: rgba(72, 214, 233, 0.28);
+  border-color: rgba(72, 214, 233, 0.85);
+  box-shadow: 0 10px 24px rgba(72, 214, 233, 0.25);
+}
+
+.model-picker {
+  margin: 2rem 0 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.model-picker .form-label {
+  font-weight: 600;
+  color: rgba(244, 246, 250, 0.85);
+}
+
+.model-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.model-chip {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.8rem 1.15rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(72, 214, 233, 0.35);
+  background: rgba(15, 31, 61, 0.5);
+  cursor: pointer;
+  transition: transform 0.2s ease, border 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.model-chip:focus-within {
+  box-shadow: 0 0 0 3px rgba(72, 214, 233, 0.35);
+}
+
+.model-chip input {
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.model-chip .model-name {
+  font-weight: 600;
+  color: var(--color-4);
+}
+
+.model-chip .model-note {
+  font-size: 0.8rem;
+  color: rgba(244, 246, 250, 0.65);
+}
+
+.model-chip.is-active {
+  border-color: rgba(72, 214, 233, 0.85);
+  background: rgba(72, 214, 233, 0.18);
+  box-shadow: 0 12px 28px rgba(72, 214, 233, 0.25);
+  transform: translateY(-1px);
+}
+
+.download-row {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.download-row.is-hidden {
+  display: none;
+}
+
+.model-warning {
+  font-size: 0.9rem;
+  color: rgba(244, 246, 250, 0.85);
+  background: rgba(255, 186, 0, 0.14);
+  border: 1px solid rgba(255, 186, 0, 0.35);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.ai-option.is-disabled {
+  opacity: 0.55;
+}
+
+.ai-option.is-disabled button {
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.ai-option.is-disabled .feature-slider,
+.ai-option.is-disabled .feature-input {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
 .ai-module {
   display: grid;
   gap: 1.75rem;
@@ -335,6 +432,21 @@ strong,b {
   margin-top: 0.75rem;
   display: grid;
   gap: 0.4rem;
+}
+
+.schema-panel {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.schema-panel ul {
+  margin-top: 0;
+}
+
+.schema-note {
+  font-size: 0.8rem;
+  color: rgba(244, 246, 250, 0.7);
 }
 
 .ghost-btn,

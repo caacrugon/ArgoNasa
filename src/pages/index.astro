@@ -31,15 +31,39 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
           Download the production <strong>XGBoost light-curve classifier</strong> and run it locally or in your
           own cloud notebook. Use the interface below to run a batch upload or a single-candidate review.
         </p>
-        <div class="ai-download">
-          <a class="download-chip" href="/models/exoplanet_xgb_pipeline.joblib" download>
-            exoplanet_xgb_pipeline.joblib
-          </a>
-          <span class="download-hint">Trained on confirmed Kepler & TESS transits - 7 engineered features</span>
+        <div class="model-picker" role="group" aria-labelledby="model-picker-label">
+          <span id="model-picker-label" class="form-label">Choose a model</span>
+          <div class="model-options">
+            <label class="model-chip is-active" data-model="exoplanet_xgb_pipeline">
+              <input type="radio" name="model-choice" value="exoplanet_xgb_pipeline" checked />
+              <span class="model-name">Exoplanet XGBoost</span>
+              <span class="model-note">CSV uploads and interactive controls</span>
+            </label>
+            <label class="model-chip" data-model="kepler_disposition_model">
+              <input type="radio" name="model-choice" value="kepler_disposition_model" />
+              <span class="model-name">Kepler disposition</span>
+              <span class="model-note">CSV batch upload only</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="ai-download" id="model-downloads">
+          <div class="download-row" data-model="exoplanet_xgb_pipeline">
+            <a class="download-chip is-active" href="/models/exoplanet_xgb_pipeline.joblib" download>
+              exoplanet_xgb_pipeline.joblib
+            </a>
+            <span class="download-hint">Trained on confirmed Kepler & TESS transits - 7 engineered features</span>
+          </div>
+          <div class="download-row is-hidden" data-model="kepler_disposition_model">
+            <a class="download-chip" href="/models/kepler_disposition_model.joblib" download>
+              kepler_disposition_model.joblib
+            </a>
+            <span class="download-hint">Disposition model tuned on Kepler vetting labels - CSV batches only</span>
+          </div>
         </div>
 
         <div class="ai-module">
-          <article class="ai-option">
+          <article class="ai-option" data-mode="batch">
             <h3>1. Upload light-curve table</h3>
             <p>CSV with one row per observation. Required headers shown in the schema.</p>
             <form class="ai-form" id="batch-form" aria-label="Batch exoplanet upload">
@@ -47,24 +71,36 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
               <input class="file-input" id="candidate-file" name="candidate-file" type="file" accept=".csv,.tsv,.txt" />
               <details class="schema">
                 <summary>Expected columns</summary>
-                <ul>
-                  <li><code>orbital_period_days</code></li>
-                  <li><code>transit_duration_hrs</code></li>
-                  <li><code>transit_depth_pct</code></li>
-                  <li><code>stellar_temp_k</code></li>
-                  <li><code>stellar_radius_solar</code></li>
-                  <li><code>flux_variability</code></li>
-                  <li><code>signal_to_noise</code></li>
-                </ul>
+                <div class="schema-panel" data-schema-model="exoplanet_xgb_pipeline">
+                  <ul>
+                    <li><code>orbital_period_days</code></li>
+                    <li><code>transit_duration_hrs</code></li>
+                    <li><code>transit_depth_pct</code></li>
+                    <li><code>stellar_temp_k</code></li>
+                    <li><code>stellar_radius_solar</code></li>
+                    <li><code>flux_variability</code></li>
+                    <li><code>signal_to_noise</code></li>
+                  </ul>
+                </div>
+                <div class="schema-panel is-hidden" data-schema-model="kepler_disposition_model">
+                  <ul>
+                    <li><code>time</code></li>
+                    <li><code>lightcurves</code></li>
+                  </ul>
+                  <p class="schema-note">Use cadence-aligned time (BKJD) and lightcurve flux values exported from Kepler light curve files.</p>
+                </div>
               </details>
               <button type="button" id="preview-btn" class="ghost-btn">Predict for table</button>
             </form>
             <div class="ai-results" id="batch-results"></div>
           </article>
 
-          <article class="ai-option">
+          <article class="ai-option" data-mode="single" id="single-option">
             <h3>2. Evaluate a single candidate</h3>
             <p>Adjust the controls to shape a candidate and estimate its likelihood.</p>
+            <div class="model-warning" id="single-model-warning" hidden>
+              The Kepler disposition model only supports CSV uploads. Switch back to Exoplanet XGBoost to use the interactive sliders.
+            </div>
                         <div class="feature-stack">
               <label class="feature-block" data-key="orbital_period_days" data-label="Orbital period (days)">
                 <span class="feature-label">Orbital period (days)</span>
@@ -194,11 +230,24 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
 
       <script type="module">
         const endpoint = "/api/predict.json";
+        const DEFAULT_MODEL = "exoplanet_xgb_pipeline";
+        const CSV_ONLY_MODELS = new Set(["kepler_disposition_model"]);
+        let activeModel = DEFAULT_MODEL;
         const sections = {
           ai: document.getElementById("ai"),
           workflow: document.getElementById("workflow"),
         };
         const toggles = Array.from(document.querySelectorAll(".section-toggle"));
+        const modelRadios = Array.from(document.querySelectorAll('input[name="model-choice"]'));
+        const modelChips = Array.from(document.querySelectorAll(".model-chip"));
+        const downloadRows = Array.from(document.querySelectorAll("#model-downloads .download-row"));
+        const schemaPanels = Array.from(document.querySelectorAll(".schema-panel[data-schema-model]"));
+        const previewBtn = document.getElementById("preview-btn");
+        const batchResults = document.getElementById("batch-results");
+        const singleBtn = document.getElementById("single-btn");
+        const singleResults = document.getElementById("single-results");
+        const singleOption = document.getElementById("single-option");
+        const singleWarning = document.getElementById("single-model-warning");
         const featureBlocks = Array.from(document.querySelectorAll(".feature-block"));
         const featureDefs = featureBlocks
           .map((block) => {
@@ -236,6 +285,35 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
         let radarChart;
         let barsChart;
         let activeBlock = null;
+
+        const syncModelUI = () => {
+          modelChips.forEach((chip) => {
+            const value = chip.dataset.model || chip.querySelector('input')?.value;
+            const isActive = value === activeModel;
+            chip.classList.toggle('is-active', !!isActive);
+            const radio = chip.querySelector('input');
+            if (radio) radio.checked = !!isActive;
+          });
+          downloadRows.forEach((row) => {
+            const isActive = row.dataset.model === activeModel;
+            row.classList.toggle('is-hidden', !isActive);
+            const chip = row.querySelector('.download-chip');
+            chip?.classList.toggle('is-active', isActive);
+          });
+          schemaPanels.forEach((panel) => {
+            panel.classList.toggle('is-hidden', panel.dataset.schemaModel !== activeModel);
+          });
+          const singleDisabled = CSV_ONLY_MODELS.has(activeModel);
+          if (singleBtn) singleBtn.disabled = singleDisabled;
+          if (singleOption) {
+            singleOption.classList.toggle('is-disabled', singleDisabled);
+            if (singleDisabled) singleOption.setAttribute('aria-disabled', 'true');
+            else singleOption.removeAttribute('aria-disabled');
+          }
+          if (singleWarning) singleWarning.hidden = !singleDisabled;
+          if (batchResults) batchResults.innerHTML = '';
+          if (singleResults) singleResults.innerHTML = '';
+        };
 
         const loadChartJs = () => {
           if (typeof window === "undefined") return Promise.resolve(null);
@@ -287,6 +365,14 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
             activeBlock = block;
           }
         };
+
+        modelRadios.forEach((radio) => {
+          radio.addEventListener('change', () => {
+            if (!radio.checked) return;
+            activeModel = radio.value;
+            syncModelUI();
+          });
+        });
 
         const computeNormalized = () =>
           featureDefs.map(({ slider, min, max }) => {
@@ -483,6 +569,7 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
           }
         };
 
+        syncModelUI();
         showSection("workflow", { scroll: false });
 
         toggles.forEach((btn) => {
@@ -536,7 +623,7 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
           const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rows }),
+            body: JSON.stringify({ rows, model: activeModel }),
           });
           const payload = await response.json();
           if (!response.ok) {
@@ -545,8 +632,6 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
           return payload;
         };
 
-        const previewBtn = document.getElementById('preview-btn');
-        const batchResults = document.getElementById('batch-results');
         previewBtn?.addEventListener('click', async () => {
           batchResults.innerHTML = '<div class="result-card">Processing...</div>';
           const fileInput = document.getElementById('candidate-file');
@@ -557,6 +642,7 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
           }
           const formData = new FormData();
           formData.append('candidate-file', file);
+          formData.append('model', activeModel);
           try {
             const response = await fetch(endpoint, { method: 'POST', body: formData });
             const data = await response.json();
@@ -570,10 +656,12 @@ const pageDescription = "Argo helps NASA space app judges explore a human-AI wor
           }
         });
 
-        const singleBtn = document.getElementById('single-btn');
-        const singleResults = document.getElementById('single-results');
         singleBtn?.addEventListener('click', async () => {
           singleResults.innerHTML = '<div class="result-card">Processing...</div>';
+          if (CSV_ONLY_MODELS.has(activeModel)) {
+            renderError(singleResults, 'This model only supports CSV uploads.');
+            return;
+          }
           const row = {};
           featureDefs.forEach(({ key, slider }) => {
             row[key] = Number(slider.value);
